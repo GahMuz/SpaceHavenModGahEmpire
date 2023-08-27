@@ -1,4 +1,4 @@
-package com.cyanblob.SpaceHavenMod;
+package com.gah.empire;
 
 import fi.bugbyte.spacehaven.gui.*;
 import fi.bugbyte.spacehaven.world.Ship;

@@ -1,4 +1,4 @@
-package com.cyanblob.SpaceHavenMod;
+package com.gah.empire;
 
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;

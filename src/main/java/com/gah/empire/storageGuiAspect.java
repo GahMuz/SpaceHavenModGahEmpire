@@ -1,4 +1,4 @@
-package com.cyanblob.SpaceHavenMod;
+package com.gah.empire;
 
 import fi.bugbyte.framework.screen.TextIconTooltip;
 import fi.bugbyte.spacehaven.gui.GUIHelper.PlayerShipListItem;

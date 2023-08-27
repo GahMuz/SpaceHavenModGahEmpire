@@ -1,7 +1,8 @@
 <aspectj>
     <aspects>
         <!-- Aspects -->
-        <aspect name="com.cyanblob.SpaceHavenMod.JumpAspect" />
+        <aspect name="com.gah.empire.station.KeepAspect" />
+        <aspect name="com.gah.empire.station.NavigateAspect" />
     </aspects>
 
     <weaver options="-verbose -showWeaveInfo">

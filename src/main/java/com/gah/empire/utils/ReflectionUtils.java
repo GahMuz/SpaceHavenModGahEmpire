@@ -1,5 +1,7 @@
-package com.cyanblob.SpaceHavenMod;
+package com.gah.empire.utils;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -58,6 +60,20 @@ public class ReflectionUtils {
 		return (R) privateUriMethod.invoke(_this, parameters.toArray(new Object[0]));
 	}
 
+	public static < T, R > R getSuperMethodUnreflect( T _this, String methodname, List<Class<?>> parameterTypes, List<?> parameters ) throws Throwable {
+		Method privateUriMethod = _this.getClass().getSuperclass().getDeclaredMethod(methodname, parameterTypes.toArray(new Class<?>[0]));
+		privateUriMethod.setAccessible(true);
+		MethodHandles.Lookup lookup = MethodHandles.lookup();
+		MethodHandle superMethodHandle = lookup.unreflect(privateUriMethod);
+		return (R) superMethodHandle.invoke(_this, parameters.toArray(new Object[0]));
+	}
+
+	public static < T > MethodHandle getVoidSuperMethodUnreflect( T _this, String methodname, List<Class<?>> parameterTypes ) throws Throwable {
+		Method privateUriMethod = _this.getClass().getSuperclass().getDeclaredMethod(methodname, parameterTypes.toArray(new Class<?>[0]));
+		privateUriMethod.setAccessible(true);
+		return MethodHandles.lookup().unreflect(privateUriMethod);
+	}
+
 	public static < T > T getPrivateClass( Class<T> clazz, List<Class<?>> parameterTypes, List<?> parameters ) throws InstantiationException,
 			NoSuchMethodException, SecurityException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
 		Constructor<T> constructor = clazz.getDeclaredConstructor(parameterTypes.toArray(new Class<?>[0]));
@@ -78,6 +94,15 @@ public class ReflectionUtils {
 		Class<?> clazz = getParentClass(_this, depth);
 		Field privateUriField = clazz.getDeclaredField(fieldname);
 		privateUriField.setAccessible(true);
+		return (F) privateUriField.get(_this);
+	}
+
+	public static < T, F > F setDeclaredField( T _this, int depth, String fieldname, F value )
+			throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
+		Class<?> clazz = getParentClass(_this, depth);
+		Field privateUriField = clazz.getDeclaredField(fieldname);
+		privateUriField.setAccessible(true);
+		privateUriField.set(_this, value);
 		return (F) privateUriField.get(_this);
 	}
 }

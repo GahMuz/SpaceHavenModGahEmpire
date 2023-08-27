@@ -1,4 +1,4 @@
-package com.cyanblob.SpaceHavenMod;
+package com.gah.empire.station;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
@@ -9,6 +9,7 @@ import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 
 import com.badlogic.gdx.utils.Array;
+import com.gah.empire.utils.ReflectionUtils;
 
 import fi.bugbyte.framework.Game;
 import fi.bugbyte.framework.screen.Screen;
@@ -36,7 +37,7 @@ import fi.bugbyte.spacehaven.world.elements.Floor;
 import fi.bugbyte.spacehaven.world.elements.Hull;
 
 @Aspect
-public class JumpAspect {
+public class KeepAspect {
 
 	/* *****************************************************************************************
 	 *                           Mod JumpPressed Method
@@ -375,10 +376,4 @@ public class JumpAspect {
 			}
 		}
 	}
-
-	/* *****************************************************************************************
-	 *                           Mod jumpShip Method
-	 * prevent station loss
-	 * ****************************************************************************************/
-
 }
