@@ -6,7 +6,6 @@ import java.util.Arrays;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
-import org.aspectj.lang.annotation.Before;
 import org.aspectj.lang.annotation.Pointcut;
 
 import com.badlogic.gdx.graphics.Color;
@@ -41,18 +40,9 @@ import fi.bugbyte.spacehaven.world.Visuals;
 @Aspect
 public class NavigateAspect {
 
-	@Before( "get(* fi.bugbyte.spacehaven.starmap.Bodies.AbsBody.name)" )
-	public void beforeGetName2() throws Throwable {
-		try {
-			throw new Exception();
-		} catch ( Exception e ) {
-			e.printStackTrace();
-		}
-	}
-
 	/* *****************************************************************************************
-	 *                           Mod jumpShip Method
-	 * prevent station loss
+	 *                           Mod SectorSelected.open Method
+	 * display information on player ship in starmap selected sector
 	 * ****************************************************************************************/
 	@Pointcut( "execution(void fi.bugbyte.spacehaven.gui.MenuSystemItems.SectorSelected.open(fi.bugbyte.spacehaven.gui.MenuSystem.SelectionBox)) && args(selectionBox) " )
 	public void modOpen( SelectionBox selectionBox ) {
@@ -60,11 +50,6 @@ public class NavigateAspect {
 
 	@Around( "modOpen(selectionBox)" )
 	public void aroundOpen( ProceedingJoinPoint pjp, MenuSystem.SelectionBox selectionBox ) throws Throwable {
-		try {
-			throw new Exception();
-		} catch ( Exception e ) {
-			e.printStackTrace();
-		}
 		SectorSelected _this = ReflectionUtils.getThis(pjp);
 
 		Sector sector = ReflectionUtils.getDeclaredField(_this, "sector");
