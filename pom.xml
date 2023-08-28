@@ -22,7 +22,7 @@
         <dependency>
             <groupId>fi.bugbyte</groupId>
             <artifactId>spacehaven</artifactId>
-            <version>1.0.2</version>
+            <version>1.0.3</version>
         </dependency>
 
         <dependency>
@@ -31,6 +31,13 @@
             <version>1.9.19</version>
             <scope>test</scope>
         </dependency>
+        
+		<!-- https://mvnrepository.com/artifact/org.ow2.asm/asm -->
+		<dependency>
+			<groupId>org.ow2.asm</groupId>
+			<artifactId>asm</artifactId>
+			<version>9.5</version>
+		</dependency>
     </dependencies>
 
     <build>

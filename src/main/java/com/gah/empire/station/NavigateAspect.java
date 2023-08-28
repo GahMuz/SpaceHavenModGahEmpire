@@ -24,11 +24,17 @@ import fi.bugbyte.framework.screen.StageButton;
 import fi.bugbyte.gen.compiled.GUISettings;
 import fi.bugbyte.gen.compiled.GuiSkin1;
 import fi.bugbyte.gen.compiled.GuiSkins3;
+import fi.bugbyte.gen.compiled.IconButton1;
+import fi.bugbyte.gen.compiled.UnitControlButtons1;
+import fi.bugbyte.spacehaven.GameData;
 import fi.bugbyte.spacehaven.SpaceHaven;
+import fi.bugbyte.spacehaven.gui.GUI;
 import fi.bugbyte.spacehaven.gui.MenuSystem;
 import fi.bugbyte.spacehaven.gui.MenuSystem.SelectionBox;
 import fi.bugbyte.spacehaven.gui.MenuSystemItems.SectorSelected;
 import fi.bugbyte.spacehaven.gui.MenuSystemItems.SectorSelected.SectorInfo;
+import fi.bugbyte.spacehaven.gui.StarMapScreen;
+import fi.bugbyte.spacehaven.gui.StarMapScreen.ScrollTarget;
 import fi.bugbyte.spacehaven.starmap.Bodies;
 import fi.bugbyte.spacehaven.starmap.StarMap;
 import fi.bugbyte.spacehaven.starmap.StarMap.CreatedShip;
@@ -36,6 +42,7 @@ import fi.bugbyte.spacehaven.starmap.StarMap.Fleet;
 import fi.bugbyte.spacehaven.starmap.StarMap.Sector;
 import fi.bugbyte.spacehaven.stuff.FactionUtils;
 import fi.bugbyte.spacehaven.world.Visuals;
+import fi.bugbyte.spacehaven.world.World;
 
 @Aspect
 public class NavigateAspect {
@@ -127,6 +134,7 @@ public class NavigateAspect {
 		}
 
 		/********************* core modif ************************/
+		boolean hasPlayerShip = false;
 		Array<StarMap.Fleet> fleets = sector.getFleet();
 		if ( fleets != null ) {
 			for ( StarMap.Fleet f : fleets ) {
@@ -134,6 +142,7 @@ public class NavigateAspect {
 					if ( f.createdShips != null ) {
 						for ( StarMap.CreatedShip cs : f.createdShips ) {
 							list.addItem(createdShipSectorInfo(f, cs, font, fontColor));
+							hasPlayerShip = true;
 						}
 					}
 				} else if ( sector.isVisible() ) {
@@ -146,6 +155,10 @@ public class NavigateAspect {
 					list.addItem(i);
 				}
 			}
+		}
+
+		if ( hasPlayerShip ) {
+			addDisplayButton(sector, selectionBox);
 		}
 		/********************* end core modif ************************/
 
@@ -200,4 +213,140 @@ public class NavigateAspect {
 		return i;
 	}
 
+	private void addDisplayButton( Sector sector, SelectionBox selectionBox ) {
+
+		IconButton1 button = UnitControlButtons1.getEnter();
+		Vector2 v = selectionBox.getSkin().getPos(GuiSkin.BoxCorner.TopRight);
+		button.moveTo(v.x - 50.0f * Settings.uiScale, v.y - 15.0f * Settings.uiScale);
+		button.setScale(0.75f);
+		button.setClickHandler(new StageButton.clickHandler() {
+			@Override
+			public void clicked() {
+				StarMap starmap = sector.getSystem().getMap();
+				try {
+					ReflectionUtils.setDeclaredField(starmap, "playerAt", sector);
+					GUI gui = GUI.instance;
+					World world = gui.getWorld();
+					GameData gameData = world.getGameData();
+					ReflectionUtils.setDeclaredField(gameData, "playerSectorId", sector.getId());
+
+					StarMapScreen sms = (StarMapScreen) gui.getActivePopup();
+					ReflectionUtils.getDeclaredMethod(sms, "cancelAutoTravel", Arrays.asList(), Arrays.asList());
+
+					StarMap map = ReflectionUtils.getDeclaredField(sms, "map");
+					map.cancelRoute();
+					map.setDropToNormal(true);
+					ReflectionUtils.setDeclaredField(sms, "useZoomInToDrop", true);
+
+					ScrollTarget scrollTarget = ReflectionUtils.getDeclaredField(sms, "scrollTarget");
+					scrollTarget.zoomInLerpTo(sector);
+
+					ReflectionUtils.setDeclaredField(sms, "zoomInTime", 0.0f);
+
+				} catch ( NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException | NoSuchMethodException
+						| InvocationTargetException e ) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				//starmap.setPlayerAt(sector);
+			}
+		});
+		selectionBox.addButton(button);
+	}
+	/*
+	private void deploy() {
+		SectorMap.this.lastAnswer = true;
+	    SectorMap.this.stillOpen = false;
+	    SpaceHaven.disableWorkers = false;
+	    if (SectorMap.this.isMoveShips) {
+	        for (AwayTeam.Mission m : SectorMap.this.world.getAcceptedMissions()) {
+	            AwayTeam.MissionRule r = m.getRule(AwayTeam.MissionRuleType.CannotLeaveSector);
+	            if (r == null) continue;
+	            r.failed = true;
+	        }
+	        for (IsoShip s : SectorMap.this.playerShips) {
+	            if (s.changedPosition && s.newGridX >= 0 && s.newGridY >= 0) {
+	                SectorMap.this.world.getSpace().moveShipToNewPos(s.newGridX, s.newGridY, s.ship);
+	            }
+	            if (!SectorMap.this.wasLongJump) continue;
+	            GameCustomization.DiffThreat travelThreat = GameCustomization.DiffThreat.NoThreat;
+	            if (((SectorMap)SectorMap.this).world.getGameSettings().modeSettings instanceof GameCustomization.NormalModeDiffSettings) {
+	                travelThreat = ((GameCustomization.NormalModeDiffSettings)((SectorMap)SectorMap.this).world.getGameSettings().modeSettings).interTravelThreat;
+	            }
+	            GameCustomization.Randomness randomness = ((SectorMap)SectorMap.this).world.getGameSettings().modeSettings.getRandomness();
+	            if (travelThreat == GameCustomization.DiffThreat.NoThreat) continue;
+	            int rolls = 0;
+	            float chanceToGetOneLevel = 0.0f;
+	            int minLevel = 0;
+	            switch (travelThreat) {
+	                case NoThreat: {
+	                    break;
+	                }
+	                case LittleThreat: {
+	                    minLevel = 1;
+	                    break;
+	                }
+	                case MediumThreat: {
+	                    minLevel = 2;
+	                    break;
+	                }
+	                case SubstantialThreat: {
+	                    rolls = 1;
+	                    chanceToGetOneLevel = 0.6f;
+	                    minLevel = 3;
+	                    break;
+	                }
+	                case SeriousThreat: {
+	                    rolls = 2;
+	                    chanceToGetOneLevel = 0.8f;
+	                    minLevel = 6;
+	                    break;
+	                }
+	            }
+	            Array<Character> arr = s.ship.getCharacters();
+	            for (int k = 0; k < arr.size; ++k) {
+	                AbstractPersonality.Condition condition;
+	                Character c = arr.get(k);
+	                if (c.isInStasis()) continue;
+	                ConditionManager.trigger(AbstractPersonality.ConditionTriggerSignal.NoHyperSleepChamber, c.getPersonality(), "");
+	                int sicknessLevel = minLevel;
+	                for (int i = 0; i < rolls; ++i) {
+	                    boolean hit = EncounterHelpers.rollDice(randomness, Game.random, "longJump_sickness", chanceToGetOneLevel);
+	                    if (!hit) continue;
+	                    ++sicknessLevel;
+	                }
+	                if (sicknessLevel <= 0 || (condition = SpaceHaven.library.getCondition(3164)) == null) continue;
+	                condition.setLevel(sicknessLevel);
+	                condition.setLevelAffectsAndRandoms();
+	                c.getPersonality().addCondition(condition, null);
+	            }
+	        }
+	        if (SectorMap.this.cameraClosestTo != null) {
+	            int sx = SectorMap.this.cameraClosestTo.getShipGridX() + SectorMap.this.cameraClosestTo.getMassCenterX() / 2;
+	            int sy = SectorMap.this.cameraClosestTo.getShipGridY() + SectorMap.this.cameraClosestTo.getMassCenterY() / 2;
+	            Vector2 k = GridUtils.toIsometric(sx, sy);
+	            float shipX = k.x;
+	            float shipY = k.y;
+	            float cameraX = shipX - SectorMap.this.cameraOffX;
+	            float cameraY = shipY - SectorMap.this.cameraOffY;
+	            float zoom = SectorMap.this.world.getRenderer().getZoom();
+	            SectorMap.this.world.getRenderer().setCameraPos(cameraX, cameraY, zoom);
+	        }
+	    }
+	    for (Craft c : SectorMap.this.world.getCrafts()) {
+	        c.stop();
+	    }
+	    for (Ship s : SectorMap.this.world.getShips()) {
+	        s.getRoof().redoRoofLine();
+	    }
+	    SectorMap.this.world.redoSunRayMap();
+	    if (SectorMap.this.isMoveShips) {
+	        SectorMap.this.world.setCameraToPlayerShip(true);
+	        float target = SectorMap.this.world.getAutoSaveTimeTargetTime();
+	        float now = SectorMap.this.world.getAutoSaveTimer();
+	        if (now > 120.0f && target - now > 60.0f) {
+	            SectorMap.this.world.setAutoSaveTimer(target - 5.0f);
+	        }
+	    }
+	}*/
 }
