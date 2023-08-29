@@ -16,13 +16,6 @@
             <groupId>org.aspectj</groupId>
             <artifactId>aspectjrt</artifactId>
             <version>1.9.19</version>
-            <!--<version>1.5.4</version>-->
-        </dependency>
-
-        <dependency>
-            <groupId>fi.bugbyte</groupId>
-            <artifactId>spacehaven</artifactId>
-            <version>1.0.3</version>
         </dependency>
 
         <dependency>
@@ -30,6 +23,12 @@
             <artifactId>aspectjweaver</artifactId>
             <version>1.9.19</version>
             <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>fi.bugbyte</groupId>
+            <artifactId>spacehaven</artifactId>
+            <version>1.0.3</version>
         </dependency>
         
 		<!-- https://mvnrepository.com/artifact/org.ow2.asm/asm -->

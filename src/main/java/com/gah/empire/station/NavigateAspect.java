@@ -230,7 +230,13 @@ public class NavigateAspect {
 					GameData gameData = world.getGameData();
 					ReflectionUtils.setDeclaredField(gameData, "playerSectorId", sector.getId());
 
+					// maybe it will work
+					starmap.jumpPlayerToNextSector(sector);
+
+					// nice zoom effect from StarMapScreen.drop()
 					StarMapScreen sms = (StarMapScreen) gui.getActivePopup();
+					ReflectionUtils.setDeclaredField(sms, "selectedDropTarget", sector);
+					
 					ReflectionUtils.getDeclaredMethod(sms, "cancelAutoTravel", Arrays.asList(), Arrays.asList());
 
 					StarMap map = ReflectionUtils.getDeclaredField(sms, "map");
