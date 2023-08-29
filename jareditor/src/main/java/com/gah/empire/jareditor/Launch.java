@@ -1,4 +1,4 @@
-package com.gah.jareditor;
+package com.gah.empire.jareditor;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -6,9 +6,9 @@ import java.util.Map;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 
-import com.gah.jareditor.adapters.Adapter;
-import com.gah.jareditor.adapters.AddFieldAdapter;
-import com.gah.jareditor.adapters.PublicClassAdapter;
+import com.gah.empire.jareditor.adapters.Adapter;
+import com.gah.empire.jareditor.adapters.AddFieldAdapter;
+import com.gah.empire.jareditor.adapters.PublicClassAdapter;
 
 public class Launch {
 

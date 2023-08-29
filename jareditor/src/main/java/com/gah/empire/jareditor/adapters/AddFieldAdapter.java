@@ -1,4 +1,4 @@
-package com.gah.jareditor.adapters;
+package com.gah.empire.jareditor.adapters;
 
 import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.Type;
