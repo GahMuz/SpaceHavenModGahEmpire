@@ -1,9 +1,9 @@
-package com.gah.empire.utils.jareditor.adapters;
+package com.gah.jareditor.adapters;
 
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 
-import com.gah.empire.utils.jareditor.Configuration;
+import com.gah.jareditor.Configuration;
 
 public class Adapter extends ClassVisitor {
 

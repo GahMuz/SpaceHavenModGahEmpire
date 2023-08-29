@@ -1,4 +1,4 @@
-package com.gah.empire.utils.jareditor;
+package com.gah.jareditor;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -16,7 +16,7 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
 
-import com.gah.empire.utils.jareditor.adapters.Adapter;
+import com.gah.jareditor.adapters.Adapter;
 
 public class JarEditor {
 

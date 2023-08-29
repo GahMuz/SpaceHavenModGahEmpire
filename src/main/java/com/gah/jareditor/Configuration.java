@@ -1,4 +1,4 @@
-package com.gah.empire.utils.jareditor;
+package com.gah.jareditor;
 
 import org.objectweb.asm.Opcodes;
 

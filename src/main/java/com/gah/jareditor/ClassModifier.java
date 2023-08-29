@@ -1,4 +1,4 @@
-package com.gah.empire.utils.jareditor;
+package com.gah.jareditor;
 
 import java.io.InputStream;
 import java.util.jar.JarEntry;
@@ -7,7 +7,7 @@ import java.util.jar.JarOutputStream;
 
 import org.objectweb.asm.ClassReader;
 
-import com.gah.empire.utils.jareditor.adapters.Adapter;
+import com.gah.jareditor.adapters.Adapter;
 
 public class ClassModifier {
 
