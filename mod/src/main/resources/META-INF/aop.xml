@@ -1,0 +1,13 @@
+<aspectj>
+    <aspects>
+        <!-- Aspects -->
+        <aspect name="com.gah.empire.station.KeepAspect" />
+        <aspect name="com.gah.empire.station.NavigateAspect" />
+        <aspect name="com.gah.empire.station.ShipAspect" />
+    </aspects>
+
+    <weaver options="-verbose -showWeaveInfo">
+        <!-- Ignore everything but game logic -->
+        <include within="fi.bugbyte..*" />
+    </weaver>
+</aspectj>

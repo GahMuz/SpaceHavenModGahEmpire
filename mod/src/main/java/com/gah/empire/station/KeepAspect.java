@@ -74,8 +74,10 @@ public class KeepAspect {
 			if ( !check )
 				continue;
 
-			if ( isStation(s) )
+			if ( isStation(s) ) {
+				leavesPartyOnJump.add(s);
 				continue;
+			}
 
 			Ship.HyperTravelCapability cap = s.getHyperTravelCapability();
 			if ( cap != Ship.HyperTravelCapability.Charged ) {
