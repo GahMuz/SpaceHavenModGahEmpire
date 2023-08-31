@@ -15,6 +15,7 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 import com.gah.empire.ship.ShipDao;
 import com.gah.empire.utils.ReflectionUtils;
+import com.gah.empire.world.WorldUtils;
 
 import fi.bugbyte.framework.Game;
 import fi.bugbyte.framework.Settings;
@@ -316,7 +317,7 @@ public class NavigateAspect {
 		//hideShipOfSector(world, from, true);
 		//hideShipOfSector(world, sector, false);
 
-		initWorldLoad();
+		WorldUtils.initWorldLoad();
 
 		debugShips(world, 1);
 
