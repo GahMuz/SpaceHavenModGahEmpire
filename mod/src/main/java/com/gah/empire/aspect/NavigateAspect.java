@@ -1,4 +1,4 @@
-package com.gah.empire.station;
+package com.gah.empire.aspect;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
@@ -13,7 +13,7 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
-import com.gah.empire.ship.ShipDao;
+import com.gah.empire.dao.ShipDao;
 import com.gah.empire.utils.ReflectionUtils;
 import com.gah.empire.world.WorldUtils;
 
@@ -284,6 +284,9 @@ public class NavigateAspect {
 	/**********************************************************************************************************
 	 *                                    
 	 **********************************************************************************************************/
+	private void saveSector( Sector sector ) {
+		sector.save(null);
+	}
 
 	private void loadSector( Sector sector )
 			throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
@@ -300,10 +303,12 @@ public class NavigateAspect {
 		// save it
 		ReflectionUtils.getDeclaredMethod(world, "saveSector", Arrays.asList(), Arrays.asList());
 
-		// save ships
+		// save and remove ships
 		ShipDao dao = new ShipDao();
-		for ( Ship ship : world.getShips() )
+		for ( Ship ship : world.getShips() ) {
 			dao.saveToDisk(world, ship);
+			world.removeShip(ship);
+		}
 
 		// clearing world
 		world.getShips().clear();

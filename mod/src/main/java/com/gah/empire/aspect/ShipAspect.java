@@ -1,4 +1,4 @@
-package com.gah.empire.station;
+package com.gah.empire.aspect;
 
 import org.aspectj.lang.annotation.Aspect;
 

@@ -1,4 +1,4 @@
-package com.gah.empire.ship;
+package com.gah.empire.dao;
 
 import java.io.File;
 import java.io.IOException;
