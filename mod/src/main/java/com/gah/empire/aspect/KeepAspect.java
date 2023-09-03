@@ -9,10 +9,10 @@ import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 
 import com.badlogic.gdx.utils.Array;
+import com.gah.empire.dao.DataDao;
 import com.gah.empire.dao.SectorDao;
 import com.gah.empire.dao.ShipDao;
 import com.gah.empire.utils.ReflectionUtils;
-import com.gah.empire.world.StationHolder;
 
 import fi.bugbyte.framework.Game;
 import fi.bugbyte.framework.screen.Screen;
@@ -83,7 +83,7 @@ public class KeepAspect {
 			if ( isStation(s) ) {
 				s.stationSectorId = sector.getId();
 				shipDao.saveToDisk(world, s);
-				StationHolder.put(s, sector);
+				DataDao.getData().put(s, sector);
 				continue;
 			}
 

@@ -1,13 +1,9 @@
 package com.gah.empire.jareditor;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
@@ -26,24 +22,17 @@ public class JarEditor {
 	private List<String> processed = new ArrayList<>();
 	private List<String> modified = new ArrayList<>();
 	private List<JarEntry> failed = new ArrayList<>();
+	private List<String> excludes = new ArrayList<>();
 
-	public JarEditor( String jarPath, Map<String, Adapter> modifications ) {
+	public JarEditor( String jarPath, Map<String, Adapter> modifications, List<String> excludes ) {
 		super();
 		this.jarPath = jarPath;
 		this.modifications = modifications;
+		this.excludes = excludes;
 	}
 
 	private String getBackupPath() {
-		return jarPath + ".backup";
-	}
-
-	private String backup() throws IOException {
-		String backupPath = getBackupPath();
-		File backupFile = new File(backupPath);
-		if ( !backupFile.exists() ) {
-			Files.copy(Paths.get(jarPath), backupFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-		}
-		return backupPath;
+		return "spacehaven-original.jar";
 	}
 
 	private void copy( JarOutputStream jarOutputStream, JarFile jarFile, JarEntry entry ) throws IOException {
@@ -57,6 +46,14 @@ public class JarEditor {
 			}
 		}
 		jarOutputStream.closeEntry();
+	}
+
+	private void copyClass( JarOutputStream jarOutputStream, JarFile jarFile, JarEntry entry ) throws IOException {
+		System.out.println("copy class " + entry.getName());
+		ClassModifier modifier = new ClassModifier(jarFile, jarOutputStream, entry, new Adapter());
+		boolean result = modifier.modify();
+		if ( !result )
+			failed.add(entry);
 	}
 
 	private void modify( JarOutputStream jarOutputStream, JarFile jarFile, JarEntry entry ) throws IOException {
@@ -98,7 +95,7 @@ public class JarEditor {
 	}
 
 	public void edit() throws FileNotFoundException, IOException {
-		String backupPath = backup();
+		String backupPath = getBackupPath();
 
 		JarOutputStream jarOutputStream = new JarOutputStream(new FileOutputStream(jarPath));
 		try ( JarFile jarFile = new JarFile(backupPath) ) {
@@ -112,6 +109,8 @@ public class JarEditor {
 
 				if ( modifications.containsKey(entry.getName()) ) {
 					modify(jarOutputStream, jarFile, entry);
+				} else if ( entry.getName().startsWith("fi/") && entry.getName().endsWith(".class") && !excludes.contains(entry.getName()) ) {
+					copyClass(jarOutputStream, jarFile, entry);
 				} else {
 					copy(jarOutputStream, jarFile, entry);
 				}
@@ -119,7 +118,33 @@ public class JarEditor {
 
 			displayFailed();
 			displayModification();
+			/*
+						System.out.println("successfully fixed:");
+			
+						while ( !failed.isEmpty() ) {
+							int fixed = 0;
+							Iterator<JarEntry> it = failed.iterator();
+							while ( it.hasNext() ) {
+								JarEntry entry = it.next();
+								Adapter adapter = modifications.containsKey(entry.getName()) ? modifications.get(entry.getName()) : new Adapter();
+								ClassModifier modifier = new ClassModifier(jarFile, jarOutputStream, entry, adapter);
+								boolean result = modifier.modify();
+								if ( result ) {
+									fixed++;
+									it.remove();
+									System.out.println("- " + entry.getName());
+								}
+							}
+							if ( fixed == 0 )
+								break;
+						}
+			*/
 			jarOutputStream.close();
+
+			if ( !failed.isEmpty() )
+				System.out.println("failure");
+			else
+				System.out.println("success");
 		}
 	}
 }

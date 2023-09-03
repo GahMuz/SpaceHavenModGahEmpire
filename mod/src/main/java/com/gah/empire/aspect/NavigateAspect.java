@@ -14,10 +14,10 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
+import com.gah.empire.dao.DataDao;
 import com.gah.empire.dao.SectorDao;
 import com.gah.empire.dao.ShipDao;
 import com.gah.empire.utils.ReflectionUtils;
-import com.gah.empire.world.StationHolder;
 import com.gah.empire.world.WorldUtils;
 
 import fi.bugbyte.framework.Game;
@@ -228,7 +228,7 @@ public class NavigateAspect {
 			while ( iterator.hasNext() ) {
 				CreatedShip cs = iterator.next();
 				Ship ship = shipDao.loadShip(world, cs, false);
-				int sectorId = StationHolder.get(ship);
+				int sectorId = DataDao.getData().get(ship);
 				if ( ship.getName() != null && ( sectorId == 0 || sectorId == sector.getId() ) ) {
 					list.addItem(shipSectorInfo(fleet, ship.getName(), font, fontColor));
 					hasPlayerShip = true;
@@ -277,7 +277,11 @@ public class NavigateAspect {
 			@Override
 			public void clicked() {
 				try {
-					loadSector(sector);
+					GUI gui = GUI.instance;
+					World world = gui.getWorld();
+					savePreviousSector(world);
+					resetWorld(world);
+					loadSector(gui, world, sector);
 				} catch ( NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException | NoSuchMethodException
 						| InvocationTargetException e ) {
 					e.printStackTrace();
@@ -290,20 +294,10 @@ public class NavigateAspect {
 	/**********************************************************************************************************
 	 *                                    
 	 **********************************************************************************************************/
-	private void loadSector( Sector sector )
-			throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
-		System.out.println("load sector : " + sector.getName());
-
-		GUI gui = GUI.instance;
-		World world = gui.getWorld();
-		GameData gameData = world.getGameData();
-		StarMap starmap = sector.getSystem().getMap();
-
-		// get initial sector
+	private void savePreviousSector( World world ) throws NoSuchMethodException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
 		Sector from = world.getStarMap().getPlayerAt();
-		sectorDao.save(world, sector, false);
-
 		from.getSystem().getMap().checkSectorStuff(world);
+		sectorDao.save(world, from, false);
 		// save it
 		ReflectionUtils.getDeclaredMethod(world, "saveSector", Arrays.asList(), Arrays.asList());
 
@@ -313,8 +307,12 @@ public class NavigateAspect {
 			dao.saveToDisk(world, ship);
 			world.removeShip(ship);
 		}
+	}
 
-		// clearing world
+	/**********************************************************************************************************
+	 *                                    
+	 **********************************************************************************************************/
+	private void resetWorld( World world ) throws NoSuchMethodException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
 		world.getShips().clear();
 		world.getCrafts().clear();
 		world.getFloatingItems().clear();
@@ -323,18 +321,28 @@ public class NavigateAspect {
 		world.clearProjectiles();
 
 		WorldUtils.initWorldLoad();
+	}
+
+	/**********************************************************************************************************
+	 *                                    
+	 **********************************************************************************************************/
+	private void loadSector( GUI gui, World world, Sector sector )
+			throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
+
+		GameData gameData = world.getGameData();
+		StarMap starmap = sector.getSystem().getMap();
 
 		// set new sector
 		ReflectionUtils.setDeclaredField(starmap, "playerAt", sector);
 		ReflectionUtils.setDeclaredField(gameData, "playerSectorId", sector.getId());
 
 		// update space
-		updateSpace(gui, world, starmap, sector);
+		updateSpace(world, starmap, sector);
 
 		// load ship
 		for ( Fleet fleet : sector.getFleet() ) {
 			for ( CreatedShip cs : fleet.createdShips ) {
-				Ship ship = shipDao.loadShip(world, cs, true);
+				shipDao.loadShip(world, cs, true);
 			}
 		}
 
@@ -342,7 +350,7 @@ public class NavigateAspect {
 	}
 
 	// inspired by World.createNewSector()
-	private void updateSpace( GUI gui, World world, StarMap starMap, Sector sector )
+	private void updateSpace( World world, StarMap starMap, Sector sector )
 			throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
 		Space space = world.getSpace();
 
@@ -419,25 +427,16 @@ public class NavigateAspect {
 			world.getBg().dispose();
 		}
 
-		//if ( !load ) {
 		world.setBg(Backgrounds.getBackground(world));
 		if ( Backgrounds.useFBO ) {
 			world.setBg(Backgrounds.wrapFbo(world.getBg()));
 		}
 		space.setSectorSolarHeat(world.getSolarOutput(), world.getGameSettings(), starMap);
-		//}
 
 		world.getTrades().clear();
 		space.setDebugGrid(Game.library.getAnimation("floorTile1"));
 
 		GUI.instance.refreshSectorContent();
-	}
-
-	private void debugShips( World world, int i ) {
-		System.out.println("check world ship " + i);
-		for ( Ship ship : world.getShips() ) {
-			System.out.println("-- ship : " + ship.getName());
-		}
 	}
 
 	/**********************************************************************************************************
