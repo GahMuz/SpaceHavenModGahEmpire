@@ -3,6 +3,7 @@ package com.gah.empire.aspect;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.Iterator;
 
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -13,8 +14,10 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
+import com.gah.empire.dao.SectorDao;
 import com.gah.empire.dao.ShipDao;
 import com.gah.empire.utils.ReflectionUtils;
+import com.gah.empire.world.StationHolder;
 import com.gah.empire.world.WorldUtils;
 
 import fi.bugbyte.framework.Game;
@@ -53,12 +56,12 @@ import fi.bugbyte.spacehaven.world.TopSpace;
 import fi.bugbyte.spacehaven.world.Visuals;
 import fi.bugbyte.spacehaven.world.World;
 import fi.bugbyte.spacehaven.world.World.LoadJob;
-import fi.bugbyte.utils.FastXMLReader;
 
 @Aspect
 public class NavigateAspect {
 
 	private ShipDao shipDao = new ShipDao();
+	private SectorDao sectorDao = new SectorDao();
 
 	/* *****************************************************************************************
 	 *                           Mod SectorSelected.open Method
@@ -147,7 +150,8 @@ public class NavigateAspect {
 		}
 
 		/********************* core modif ************************/
-		boolean hasPlayerShip = displayFleets(sector, list, font, fontColor);
+		boolean samesector = sector.equals(GUI.instance.getWorld().getStarMap().getPlayerAt());
+		boolean hasPlayerShip = displayFleets(sector, list, font, fontColor, samesector);
 
 		if ( hasPlayerShip ) {
 			addDisplayButton(sector, selectionBox);
@@ -197,15 +201,14 @@ public class NavigateAspect {
 	/**********************************************************************************************************
 	 * Display fleet in sector map
 	 **********************************************************************************************************/
-	private boolean displayFleets( Sector sector, ScrollList list, BitmapFont font, Color fontColor )
+	private boolean displayFleets( Sector sector, ScrollList list, BitmapFont font, Color fontColor, boolean samesector )
 			throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
 		boolean hasPlayerShip = false;
 		Array<StarMap.Fleet> fleets = sector.getFleet();
 		if ( fleets != null ) {
 			for ( StarMap.Fleet fleet : fleets ) {
 				if ( fleet.getFaction().side == FactionUtils.FactionSide.Player ) {
-					System.out.println(fleet);
-					if ( displayPlayerFleet(sector, list, font, fontColor, fleet) ) {
+					if ( displayPlayerFleet(sector, list, font, fontColor, fleet, samesector) ) {
 						hasPlayerShip = true;
 					}
 				} else
@@ -215,30 +218,33 @@ public class NavigateAspect {
 		return hasPlayerShip;
 	}
 
-	private boolean displayPlayerFleet( Sector sector, ScrollList list, BitmapFont font, Color fontColor, Fleet fleet )
+	private boolean displayPlayerFleet( Sector sector, ScrollList list, BitmapFont font, Color fontColor, Fleet fleet, boolean samesector )
 			throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
 		World world = GUI.instance.getWorld();
 
 		boolean hasPlayerShip = false;
 		if ( fleet.createdShips != null ) {
-			for ( StarMap.CreatedShip cs : fleet.createdShips ) {
+			Iterator<CreatedShip> iterator = fleet.createdShips.iterator();
+			while ( iterator.hasNext() ) {
+				CreatedShip cs = iterator.next();
 				Ship ship = shipDao.loadShip(world, cs, false);
-				if ( ship != null ) {
-					list.addItem(shipSectorInfo(fleet, ship, font, fontColor));
+				int sectorId = StationHolder.get(ship);
+				if ( ship.getName() != null && ( sectorId == 0 || sectorId == sector.getId() ) ) {
+					list.addItem(shipSectorInfo(fleet, ship.getName(), font, fontColor));
 					hasPlayerShip = true;
-				}
+				} else if ( sectorId != 0 )
+					iterator.remove();
 			}
 		}
 		return hasPlayerShip;
 	}
 
-	private SectorInfo shipSectorInfo( Fleet fleet, Ship ship, BitmapFont font, Color fontColor )
+	private SectorInfo shipSectorInfo( Fleet fleet, String shipname, BitmapFont font, Color fontColor )
 			throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
-		System.out.println(ship.getName());
 		SectorInfo i = new SectorInfo();
 		ReflectionUtils.setDeclaredField(i, "iconColor", FactionUtils.hostilityMap.getColor(fleet.getFaction().side).getStarMapColor());
 		ReflectionUtils.setDeclaredField(i, "anim", fleet.getFactionIcon());
-		ReflectionUtils.setDeclaredField(i, "name", ship.getName());
+		ReflectionUtils.setDeclaredField(i, "name", shipname);
 		ReflectionUtils.setDeclaredField(i, "font", font);
 		ReflectionUtils.setDeclaredField(i, "fontColor", fontColor);
 		return i;
@@ -284,10 +290,6 @@ public class NavigateAspect {
 	/**********************************************************************************************************
 	 *                                    
 	 **********************************************************************************************************/
-	private void saveSector( Sector sector ) {
-		sector.save(null);
-	}
-
 	private void loadSector( Sector sector )
 			throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
 		GUI gui = GUI.instance;
@@ -295,10 +297,10 @@ public class NavigateAspect {
 		GameData gameData = world.getGameData();
 		StarMap starmap = sector.getSystem().getMap();
 
-		System.out.println("----------------------- sector : " + sector.getName());
-
 		// get initial sector
 		Sector from = world.getStarMap().getPlayerAt();
+		sectorDao.save(world, sector, true);
+
 		from.getSystem().getMap().checkSectorStuff(world);
 		// save it
 		ReflectionUtils.getDeclaredMethod(world, "saveSector", Arrays.asList(), Arrays.asList());
@@ -318,39 +320,19 @@ public class NavigateAspect {
 		world.getEncounterAIs().clear();
 		world.clearProjectiles();
 
-		// display fleets
-		//hideShipOfSector(world, from, true);
-		//hideShipOfSector(world, sector, false);
-
 		WorldUtils.initWorldLoad();
-
-		debugShips(world, 1);
-
-		// update space
-		updateSpace(gui, world, starmap, sector);
-
-		debugShips(world, 2);
 
 		// set new sector
 		ReflectionUtils.setDeclaredField(starmap, "playerAt", sector);
 		ReflectionUtils.setDeclaredField(gameData, "playerSectorId", sector.getId());
 
-		debugShips(world, 3);
+		// update space
+		updateSpace(gui, world, starmap, sector);
 
-		//removeShip(world, from);
-		//addShip(world, sector);
-
-		debugShips(world, 4);
-
-		System.out.println();
-
-		System.out.println("check sector ship");
+		// load ship
 		for ( Fleet fleet : sector.getFleet() ) {
 			for ( CreatedShip cs : fleet.createdShips ) {
-				System.out.println("-- cs : " + cs.getShipName(fleet.getFaction().side));
 				Ship ship = shipDao.loadShip(world, cs, true);
-				//world.addShip(ship);
-				world.getShips().add(ship);
 			}
 		}
 
@@ -369,60 +351,43 @@ public class NavigateAspect {
 		world.getLightWorker().removeSpace(space);
 		space.dispose();
 
-		space = ReflectionUtils.setDeclaredField(world, "space", new Space(SpaceHavenSettings.getMapSizeX(), SpaceHavenSettings.getMapSizeY(), world));
+		space = ReflectionUtils.setDeclaredField(world, "space", sectorDao.loadSector(world, sector));
 		ReflectionUtils.setDeclaredField(world, "topSpace", new TopSpace(SpaceHavenSettings.getMapSizeX(), SpaceHavenSettings.getMapSizeY(), world));
 
-		debugShips(world, 12);
+		if ( space == null ) {
+			System.out.println("missing space");
+			space = ReflectionUtils.setDeclaredField(world, "space", new Space(SpaceHavenSettings.getMapSizeX(), SpaceHavenSettings.getMapSizeY(), world));
+			space.prepFor(sector);
+		} else {
+			System.out.println("load map");
+			World.toLoad.sort(new Comparator<LoadJob>() {
 
-		boolean load = false;
-		if ( !load ) {
-
-			StarMap.SectorInformation info = sector.getInformation();
-			FastXMLReader.Element loadSpace = null;
-			if ( info != null && info.saved && ( loadSpace = info.getSpaceMap(world.getGameData().getCurrentGameSlot().getTempDir()) ) == null ) {
-				loadSpace = info.getSpaceMap(world.getGameData().getCurrentGameSlot().getDir());
-			}
-			if ( loadSpace == null ) {
-				System.out.println("prep");
-				space.prepFor(sector);
-			} else {
-				System.out.println("load map");
-				space.loadMap(loadSpace, world);
-
-				debugShips(world, 13);
-				World.toLoad.sort(new Comparator<LoadJob>() {
-
-					@Override
-					public int compare( LoadJob o1, LoadJob o2 ) {
-						if ( o1.getPriority() > o2.getPriority() ) {
-							return 1;
-						}
-						if ( o1.getPriority() < o2.getPriority() ) {
-							return -1;
-						}
-						return 0;
+				@Override
+				public int compare( LoadJob o1, LoadJob o2 ) {
+					if ( o1.getPriority() > o2.getPriority() ) {
+						return 1;
 					}
-				});
-
-				for ( LoadJob j : World.toLoad ) {
-					j.load(world);
+					if ( o1.getPriority() < o2.getPriority() ) {
+						return -1;
+					}
+					return 0;
 				}
+			});
 
-				debugShips(world, 14);
-
-				World.toLoad.clear();
-				for ( Environment.EnvHazard h : space.getHazards() ) {
-					h.playerArrivedAgain();
-				}
+			for ( LoadJob j : World.toLoad ) {
+				j.load(world);
 			}
 
-			debugShips(world, 15);
+			World.toLoad.clear();
+			for ( Environment.EnvHazard h : space.getHazards() ) {
+				h.playerArrivedAgain();
+			}
+
 			space.setSectorStuff(sector, world.getGameSettings(), starMap);
 			space.setSectorSolarHeat(world.getSolarOutput(), world.getGameSettings(), starMap);
 			Array<StarMap.WorldAddable> worldAddable = new Array<StarMap.WorldAddable>(false, 12);
-			//sector.addWorldAddable(worldAddable);
+			sector.addWorldAddable(worldAddable);
 
-			debugShips(world, 16);
 			for ( StarMap.WorldAddable a : worldAddable ) {
 				a.addToWorld(world, world.getRenderer());
 				World.toLoad.sort(new Comparator<LoadJob>() {
@@ -438,30 +403,29 @@ public class NavigateAspect {
 						return 0;
 					}
 				});
-				for ( LoadJob j : World.toLoad ) {
+				for (
+
+				LoadJob j : World.toLoad ) {
 					j.load(world);
 				}
 				World.toLoad.clear();
 			}
 
-			debugShips(world, 17);
 			World.toLoad = null;
 		}
-		debugShips(world, 18);
+
 		if ( world.getBg() != null ) {
 			world.getBg().dispose();
 		}
-		debugShips(world, 19);
-		if ( !load ) {
-			world.setBg(Backgrounds.getBackground(world));
-			if ( Backgrounds.useFBO ) {
-				world.setBg(Backgrounds.wrapFbo(world.getBg()));
-			}
-			debugShips(world, 20);
-			space.setSectorSolarHeat(world.getSolarOutput(), world.getGameSettings(), starMap);
-		}
 
-		debugShips(world, 21);
+		//if ( !load ) {
+		world.setBg(Backgrounds.getBackground(world));
+		if ( Backgrounds.useFBO ) {
+			world.setBg(Backgrounds.wrapFbo(world.getBg()));
+		}
+		space.setSectorSolarHeat(world.getSolarOutput(), world.getGameSettings(), starMap);
+		//}
+
 		world.getTrades().clear();
 		space.setDebugGrid(Game.library.getAnimation("floorTile1"));
 	}
@@ -473,166 +437,14 @@ public class NavigateAspect {
 		}
 	}
 
-	private void hideShipOfSector( World world, Sector sector, boolean hidden ) {
-		for ( Fleet fleet : sector.getFleet() ) {
-			for ( CreatedShip cs : fleet.createdShips ) {
-				Ship ship = null;
-				for ( Ship s : world.getShips() ) {
-					if ( s.getShipId() == cs.createdShipId ) {
-						ship = s;
-					}
-				}
-
-				if ( ship != null )
-					ship.hidden = hidden;
-				else
-					System.out.println("unfound ship:" + cs.getShipName(fleet.getFaction().side));
-			}
-		}
-	}
-
-	private void removeShip( World world, Sector sector ) {
-		for ( Fleet fleet : sector.getFleet() ) {
-			for ( CreatedShip cs : fleet.createdShips ) {
-				Ship ship = null;
-				for ( Ship s : world.getShips() ) {
-					if ( s.getShipId() == cs.createdShipId ) {
-						ship = s;
-					}
-				}
-
-				if ( ship != null ) {
-					System.out.println("remove ship:" + cs.getShipName(fleet.getFaction().side));
-					ship.saveMap(null);
-					world.removeShip(ship);
-				}
-			}
-		}
-	}
-
-	private void addShip( World world, Sector sector ) {
-		for ( Fleet fleet : sector.getFleet() ) {
-			for ( CreatedShip cs : fleet.createdShips ) {
-				Ship ship = null;
-				for ( Ship s : world.getShips() ) {
-					if ( s.getShipId() == cs.createdShipId ) {
-						ship = s;
-					}
-				}
-
-				if ( ship == null ) {
-					ship = shipDao.loadShip(world, cs, true);
-					if ( ship != null ) {
-						System.out.println("add ship:" + cs.getShipName(fleet.getFaction().side));
-						//world.addShip(ship);
-					}
-				}
-			}
-		}
-	}
-	/*
-	private void deploy() {
-		SectorMap.this.lastAnswer = true;
-	    SectorMap.this.stillOpen = false;
-	    SpaceHaven.disableWorkers = false;
-	    if (SectorMap.this.isMoveShips) {
-	        for (AwayTeam.Mission m : SectorMap.this.world.getAcceptedMissions()) {
-	            AwayTeam.MissionRule r = m.getRule(AwayTeam.MissionRuleType.CannotLeaveSector);
-	            if (r == null) continue;
-	            r.failed = true;
-	        }
-	        for (IsoShip s : SectorMap.this.playerShips) {
-	            if (s.changedPosition && s.newGridX >= 0 && s.newGridY >= 0) {
-	                SectorMap.this.world.getSpace().moveShipToNewPos(s.newGridX, s.newGridY, s.ship);
-	            }
-	            if (!SectorMap.this.wasLongJump) continue;
-	            GameCustomization.DiffThreat travelThreat = GameCustomization.DiffThreat.NoThreat;
-	            if (((SectorMap)SectorMap.this).world.getGameSettings().modeSettings instanceof GameCustomization.NormalModeDiffSettings) {
-	                travelThreat = ((GameCustomization.NormalModeDiffSettings)((SectorMap)SectorMap.this).world.getGameSettings().modeSettings).interTravelThreat;
-	            }
-	            GameCustomization.Randomness randomness = ((SectorMap)SectorMap.this).world.getGameSettings().modeSettings.getRandomness();
-	            if (travelThreat == GameCustomization.DiffThreat.NoThreat) continue;
-	            int rolls = 0;
-	            float chanceToGetOneLevel = 0.0f;
-	            int minLevel = 0;
-	            switch (travelThreat) {
-	                case NoThreat: {
-	                    break;
-	                }
-	                case LittleThreat: {
-	                    minLevel = 1;
-	                    break;
-	                }
-	                case MediumThreat: {
-	                    minLevel = 2;
-	                    break;
-	                }
-	                case SubstantialThreat: {
-	                    rolls = 1;
-	                    chanceToGetOneLevel = 0.6f;
-	                    minLevel = 3;
-	                    break;
-	                }
-	                case SeriousThreat: {
-	                    rolls = 2;
-	                    chanceToGetOneLevel = 0.8f;
-	                    minLevel = 6;
-	                    break;
-	                }
-	            }
-	            Array<Character> arr = s.ship.getCharacters();
-	            for (int k = 0; k < arr.size; ++k) {
-	                AbstractPersonality.Condition condition;
-	                Character c = arr.get(k);
-	                if (c.isInStasis()) continue;
-	                ConditionManager.trigger(AbstractPersonality.ConditionTriggerSignal.NoHyperSleepChamber, c.getPersonality(), "");
-	                int sicknessLevel = minLevel;
-	                for (int i = 0; i < rolls; ++i) {
-	                    boolean hit = EncounterHelpers.rollDice(randomness, Game.random, "longJump_sickness", chanceToGetOneLevel);
-	                    if (!hit) continue;
-	                    ++sicknessLevel;
-	                }
-	                if (sicknessLevel <= 0 || (condition = SpaceHaven.library.getCondition(3164)) == null) continue;
-	                condition.setLevel(sicknessLevel);
-	                condition.setLevelAffectsAndRandoms();
-	                c.getPersonality().addCondition(condition, null);
-	            }
-	        }
-	        if (SectorMap.this.cameraClosestTo != null) {
-	            int sx = SectorMap.this.cameraClosestTo.getShipGridX() + SectorMap.this.cameraClosestTo.getMassCenterX() / 2;
-	            int sy = SectorMap.this.cameraClosestTo.getShipGridY() + SectorMap.this.cameraClosestTo.getMassCenterY() / 2;
-	            Vector2 k = GridUtils.toIsometric(sx, sy);
-	            float shipX = k.x;
-	            float shipY = k.y;
-	            float cameraX = shipX - SectorMap.this.cameraOffX;
-	            float cameraY = shipY - SectorMap.this.cameraOffY;
-	            float zoom = SectorMap.this.world.getRenderer().getZoom();
-	            SectorMap.this.world.getRenderer().setCameraPos(cameraX, cameraY, zoom);
-	        }
-	    }
-	    for (Craft c : SectorMap.this.world.getCrafts()) {
-	        c.stop();
-	    }
-	    for (Ship s : SectorMap.this.world.getShips()) {
-	        s.getRoof().redoRoofLine();
-	    }
-	    SectorMap.this.world.redoSunRayMap();
-	    if (SectorMap.this.isMoveShips) {
-	        SectorMap.this.world.setCameraToPlayerShip(true);
-	        float target = SectorMap.this.world.getAutoSaveTimeTargetTime();
-	        float now = SectorMap.this.world.getAutoSaveTimer();
-	        if (now > 120.0f && target - now > 60.0f) {
-	            SectorMap.this.world.setAutoSaveTimer(target - 5.0f);
-	        }
-	    }
-	}*/
-
 	/**********************************************************************************************************
 	 * Animate the click on on enter sector
 	 **********************************************************************************************************/
 
 	private void animate( GUI gui, Sector sector )
 			throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
+		gui.getWorld().setCameraToPlayerShip(false);
+
 		// nice zoom effect from StarMapScreen.drop()
 		StarMapScreen sms = (StarMapScreen) gui.getActivePopup();
 		ReflectionUtils.setDeclaredField(sms, "selectedDropTarget", sector);

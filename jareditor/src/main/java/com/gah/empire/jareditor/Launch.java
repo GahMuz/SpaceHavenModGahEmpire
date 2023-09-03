@@ -22,7 +22,7 @@ public class Launch {
 		modifications.put("fi/bugbyte/spacehaven/gui/StarMapScreen.class", new PublicClassAdapter());
 		modifications.put("fi/bugbyte/spacehaven/gui/StarMapScreen$ScrollTarget.class", new PublicClassAdapter());
 
-		modifications.put("fi/bugbyte/spacehaven/world/Ship.class", new AddFieldAdapter("hidden", Type.BOOLEAN_TYPE, Opcodes.ACC_PUBLIC));
+		modifications.put("fi/bugbyte/spacehaven/world/Ship.class", new AddFieldAdapter("stationSectorId", Type.getType(Integer.class), Opcodes.ACC_PUBLIC));
 
 		modifications.put("fi/bugbyte/spacehaven/world/World.class", new PublicFieldAdapter("toLoad", Opcodes.ACC_PUBLIC + Opcodes.ACC_STATIC));
 

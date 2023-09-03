@@ -9,7 +9,10 @@ import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 
 import com.badlogic.gdx.utils.Array;
+import com.gah.empire.dao.SectorDao;
+import com.gah.empire.dao.ShipDao;
 import com.gah.empire.utils.ReflectionUtils;
+import com.gah.empire.world.StationHolder;
 
 import fi.bugbyte.framework.Game;
 import fi.bugbyte.framework.screen.Screen;
@@ -19,6 +22,7 @@ import fi.bugbyte.spacehaven.ai.Job;
 import fi.bugbyte.spacehaven.gui.GUI;
 import fi.bugbyte.spacehaven.gui.MenuSystemItems.JumpMenu;
 import fi.bugbyte.spacehaven.gui.popups.LeftBehindPopup;
+import fi.bugbyte.spacehaven.starmap.StarMap.Sector;
 import fi.bugbyte.spacehaven.stuff.Character;
 import fi.bugbyte.spacehaven.stuff.Entity;
 import fi.bugbyte.spacehaven.stuff.Enums;
@@ -39,6 +43,10 @@ import fi.bugbyte.spacehaven.world.elements.Hull;
 @Aspect
 public class KeepAspect {
 
+	private SectorDao sectorDao = new SectorDao();
+
+	private ShipDao shipDao = new ShipDao();
+
 	/* *****************************************************************************************
 	 *                           Mod JumpPressed Method
 	 * prevent warning on ship lose: might need to handle various case like when station crew is outside ...
@@ -50,9 +58,6 @@ public class KeepAspect {
 
 	@Around( "modJumpPressed()" )
 	public void aroundJumpPressed( ProceedingJoinPoint pjp ) throws Throwable {
-		System.out.println("out mod jump pressed");
-		System.err.println("err mod jump pressed");
-
 		JumpMenu _this = ReflectionUtils.getThis(pjp);
 		World world = ReflectionUtils.getDeclaredField(_this, "world");
 
@@ -65,6 +70,7 @@ public class KeepAspect {
 		Array<Ship> leavesPartyOnJump = ReflectionUtils.getDeclaredField(_this, "leavesPartyOnJump");
 		leavesPartyOnJump.clear();
 
+		Sector sector = world.getStarMap().getPlayerAt();
 		for ( Ship s : world.getShips() ) {
 			EncounterAI.AiShipInfo info;
 			boolean check = s.isPlayerShip();
@@ -75,7 +81,9 @@ public class KeepAspect {
 				continue;
 
 			if ( isStation(s) ) {
-				leavesPartyOnJump.add(s);
+				s.stationSectorId = sector.getId();
+				shipDao.saveToDisk(world, s);
+				StationHolder.put(s, sector);
 				continue;
 			}
 
@@ -149,6 +157,8 @@ public class KeepAspect {
 				}
 			});
 		}
+		Sector from = world.getStarMap().getPlayerAt();
+		sectorDao.save(world, from, true);
 	}
 
 	private boolean isStation( Ship s ) throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {

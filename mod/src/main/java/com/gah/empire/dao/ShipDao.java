@@ -151,4 +151,20 @@ public class ShipDao {
 		}
 		return null;
 	}
+
+	/***********************************************************************************************
+	 * get created ship real name
+	 *********************************************************************************************/
+	public String getName( World world, CreatedShip createdShip ) {
+		Ship ship = loadShipFromWorld(world, createdShip);
+		if ( ship != null )
+			return ship.getName();
+
+		File f = getShipFile(world, createdShip.createdShipId);
+		if ( f.exists() ) {
+			FastXMLReader.Element data = FastXMLReader.parse(f);
+			return data.getAttribute("sname", null);
+		}
+		return null;
+	}
 }
