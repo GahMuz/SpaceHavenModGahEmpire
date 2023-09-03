@@ -292,6 +292,8 @@ public class NavigateAspect {
 	 **********************************************************************************************************/
 	private void loadSector( Sector sector )
 			throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
+		System.out.println("load sector : " + sector.getName());
+
 		GUI gui = GUI.instance;
 		World world = gui.getWorld();
 		GameData gameData = world.getGameData();
@@ -299,7 +301,7 @@ public class NavigateAspect {
 
 		// get initial sector
 		Sector from = world.getStarMap().getPlayerAt();
-		sectorDao.save(world, sector, true);
+		sectorDao.save(world, sector, false);
 
 		from.getSystem().getMap().checkSectorStuff(world);
 		// save it
@@ -403,9 +405,8 @@ public class NavigateAspect {
 						return 0;
 					}
 				});
-				for (
 
-				LoadJob j : World.toLoad ) {
+				for ( LoadJob j : World.toLoad ) {
 					j.load(world);
 				}
 				World.toLoad.clear();
@@ -428,6 +429,8 @@ public class NavigateAspect {
 
 		world.getTrades().clear();
 		space.setDebugGrid(Game.library.getAnimation("floorTile1"));
+
+		GUI.instance.refreshSectorContent();
 	}
 
 	private void debugShips( World world, int i ) {
